@@ -1,133 +1,14 @@
 {
-  "name": "Funny Meme Cross Platform Finder",
+  "name": "Test Workflow",
   "nodes": [
     {
-      "parameters": {
-        "triggerTimes": {
-          "item": [
-            { "mode": "custom", "cronExpression": "0 0 * * *" },
-            { "mode": "custom", "cronExpression": "0 12 * * *" }
-          ]
-        }
-      },
-      "name": "Cron",
-      "type": "n8n-nodes-base.cron",
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [200, 300]
-    },
-    {
-      "parameters": {
-        "url": "https://www.googleapis.com/youtube/v3/videos",
-        "method": "GET",
-        "queryParametersUi": {
-          "parameter": [
-            { "name": "part", "value": "snippet" },
-            { "name": "chart", "value": "mostPopular" },
-            { "name": "regionCode", "value": "IN" },
-            { "name": "maxResults", "value": "20" },
-            { "name": "key", "value": "={{$env.YOUTUBE_API_KEY}}" }
-          ]
-        }
-      },
-      "name": "YouTube Trending",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 2,
-      "position": [400, 200]
-    },
-    {
-      "parameters": {
-        "functionCode": "const out=[]; for (const v of items[0].json.items){ out.push({json:{platform:'YouTube', title:v.snippet.title, description:v.snippet.description}})} return out;"
-      },
-      "name": "Format YT",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [600, 200]
-    },
-    {
-      "parameters": {
-        "url": "https://api.apify.com/v2/acts/instagram-scraper/run-sync-get-dataset-items?token={{$env.APIFY_TOKEN}}",
-        "method": "GET"
-      },
-      "name": "Instagram Fetch",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 2,
-      "position": [400, 350]
-    },
-    {
-      "parameters": {
-        "url": "https://api.apify.com/v2/acts/facebook-video-scraper/run-sync-get-dataset-items?token={{$env.APIFY_TOKEN}}",
-        "method": "GET"
-      },
-      "name": "Facebook Fetch",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 2,
-      "position": [400, 500]
-    },
-    {
-      "parameters": {
-        "mode": "append"
-      },
-      "name": "Merge All",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 1,
-      "position": [800, 350]
-    },
-    {
-      "parameters": {
-        "model": "gpt-4o-mini",
-        "messages": [
-          {
-            "role": "user",
-            "content": "Filter only Funny, Meme, Joke on Trending Topic videos from this list. Then group similar topics appearing on at least 2 platforms. Return top 5 grouped trends with topic name and platforms.\n\nData:\n{{$json}}"
-          }
-        ]
-      },
-      "name": "AI Filter + Group",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1,
-      "position": [1000, 350]
-    },
-    {
-      "parameters": {
-        "fromEmail": "your@email.com",
-        "toEmail": "your@email.com",
-        "subject": "🔥 Top 5 Cross Platform Meme Trends",
-        "text": "={{$json[\"content\"]}}"
-      },
-      "name": "Send Email",
-      "type": "n8n-nodes-base.smtp",
-      "typeVersion": 1,
-      "position": [1200, 350]
+      "position": [250, 300]
     }
   ],
-  "connections": {
-    "Cron": {
-      "main": [
-        [
-          { "node": "YouTube Trending", "type": "main", "index": 0 },
-          { "node": "Instagram Fetch", "type": "main", "index": 0 },
-          { "node": "Facebook Fetch", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "YouTube Trending": {
-      "main": [[{ "node": "Format YT", "type": "main", "index": 0 }]]
-    },
-    "Format YT": {
-      "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]]
-    },
-    "Instagram Fetch": {
-      "main": [[{ "node": "Merge All", "type": "main", "index": 1 }]]
-    },
-    "Facebook Fetch": {
-      "main": [[{ "node": "Merge All", "type": "main", "index": 2 }]]
-    },
-    "Merge All": {
-      "main": [[{ "node": "AI Filter + Group", "type": "main", "index": 0 }]]
-    },
-    "AI Filter + Group": {
-      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
-    }
-  }
+  "connections": {}
 }
-Yoy
