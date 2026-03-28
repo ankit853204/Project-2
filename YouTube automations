@@ -1,14 +1,155 @@
 {
-  "name": "Test Workflow",
+  "name": "Trending Funny Video Finder - Gemini",
   "nodes": [
     {
-      "parameters": {},
-      "id": "1",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0,12 * * *"
+            }
+          ]
+        }
+      },
+      "id": "Schedule",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.youtube.com/feeds/videos.xml?chart=mostPopular"
+      },
+      "id": "YouTubeRSS",
+      "name": "YouTube RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://rss.app/feeds/instagram-trending.xml"
+      },
+      "id": "InstagramRSS",
+      "name": "Instagram RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://rss.app/feeds/facebook-viral.xml"
+      },
+      "id": "FacebookRSS",
+      "name": "Facebook RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "batchSize": 20
+      },
+      "id": "SplitInBatches",
+      "name": "Limit 20",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_GEMINI_API_KEY",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"From this video:\\nTitle: {{$json.title}}\\nDescription: {{$json.contentSnippet || $json.description}}\\n\\nIs this Funny, Meme or Joke content? Reply only YES or NO.\"\n        }\n      ]\n    }\n  ]\n}"
+      },
+      "id": "GeminiFilter",
+      "name": "Gemini AI Filter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.candidates[0].content.parts[0].text}}",
+              "operation": "contains",
+              "value2": "YES"
+            }
+          ]
+        }
+      },
+      "id": "IfFunny",
+      "name": "Is Funny?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const map = {};\n\nfor (const item of items) {\n  const title = item.json.title?.toLowerCase();\n  if (!map[title]) map[title] = 0;\n  map[title]++;\n}\n\nconst common = Object.entries(map)\n  .filter(([k,v]) => v >= 2)\n  .slice(0,5)\n  .map(([k]) => ({ json: { title: k } }));\n\nreturn common;"
+      },
+      "id": "FindCommon",
+      "name": "Find Common 5",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "yourgmail@gmail.com",
+        "toEmail": "yourgmail@gmail.com",
+        "subject": "Top 5 Common Funny Trending Videos",
+        "text": "={{$json.title}}"
+      },
+      "id": "SendEmail",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1400, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1",
+          "name": "Gmail account"
+        }
+      }
     }
   ],
-  "connections": {}
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "YouTube RSS", "type": "main", "index": 0 },
+          { "node": "Instagram RSS", "type": "main", "index": 0 },
+          { "node": "Facebook RSS", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube RSS": {
+      "main": [[{ "node": "Limit 20", "type": "main", "index": 0 }]]
+    },
+    "Instagram RSS": {
+      "main": [[{ "node": "Limit 20", "type": "main", "index": 0 }]]
+    },
+    "Facebook RSS": {
+      "main": [[{ "node": "Limit 20", "type": "main", "index": 0 }]]
+    },
+    "Limit 20": {
+      "main": [[{ "node": "Gemini AI Filter", "type": "main", "index": 0 }]]
+    },
+    "Gemini AI Filter": {
+      "main": [[{ "node": "Is Funny?", "type": "main", "index": 0 }]]
+    },
+    "Is Funny?": {
+      "main": [[{ "node": "Find Common 5", "type": "main", "index": 0 }]]
+    },
+    "Find Common 5": {
+      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
+    }
+  }
 }
