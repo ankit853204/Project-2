@@ -1,18 +1,12 @@
 {
-  "name": "Trending Funny Video Finder - Gemini",
+  "name": "Indian Funny Trending Ultra Optimized",
   "nodes": [
     {
       "parameters": {
         "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "0 0,12 * * *"
-            }
-          ]
+          "cronExpression": "0 0,12 * * *"
         }
       },
-      "id": "Schedule",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
@@ -20,70 +14,87 @@
     },
     {
       "parameters": {
-        "url": "https://www.youtube.com/feeds/videos.xml?chart=mostPopular"
-      },
-      "id": "YouTubeRSS",
-      "name": "YouTube RSS",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1,
-      "position": [400, 200]
-    },
-    {
-      "parameters": {
-        "url": "https://rss.app/feeds/instagram-trending.xml"
-      },
-      "id": "InstagramRSS",
-      "name": "Instagram RSS",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1,
-      "position": [400, 300]
-    },
-    {
-      "parameters": {
-        "url": "https://rss.app/feeds/facebook-viral.xml"
-      },
-      "id": "FacebookRSS",
-      "name": "Facebook RSS",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1,
-      "position": [400, 400]
-    },
-    {
-      "parameters": {
-        "batchSize": 20
-      },
-      "id": "SplitInBatches",
-      "name": "Limit 20",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 1,
-      "position": [600, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_GEMINI_API_KEY",
-        "jsonParameters": true,
-        "options": {},
-        "bodyParametersJson": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"From this video:\\nTitle: {{$json.title}}\\nDescription: {{$json.contentSnippet || $json.description}}\\n\\nIs this Funny, Meme or Joke content? Reply only YES or NO.\"\n        }\n      ]\n    }\n  ]\n}"
-      },
-      "id": "GeminiFilter",
-      "name": "Gemini AI Filter",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 2,
-      "position": [800, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.candidates[0].content.parts[0].text}}",
-              "operation": "contains",
-              "value2": "YES"
-            }
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "method": "GET",
+        "responseFormat": "json",
+        "queryParametersUi": {
+          "parameter": [
+            { "name": "part", "value": "snippet" },
+            { "name": "chart", "value": "mostPopular" },
+            { "name": "regionCode", "value": "IN" },
+            { "name": "videoCategoryId", "value": "24" },
+            { "name": "maxResults", "value": "20" },
+            { "name": "key", "value": "AIzaSyDLW02bcXNIe_rrAzgtVY69Li2-K06wamo" }
           ]
         }
       },
+      "name": "YouTube Trending IN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const itemsOut = [];\nfor (const item of items[0].json.items) {\n  itemsOut.push({ json: { title: item.snippet.title, source: 'YouTube' } });\n}\nreturn itemsOut;"
+      },
+      "name": "Extract YT Titles",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const keywords = ['funny','meme','comedy','lol','joke','viral','roast'];\nreturn items.filter(i => keywords.some(k => i.json.title.toLowerCase().includes(k)));"
+      },
+      "name": "Keyword Pre Filter",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCONJemrXnNLZBiea0ycTmXn4u70q6QLMk",
+        "method": "POST",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"contents\": [{ \"parts\": [{ \"text\": \"Classify these Indian video titles as Funny/Meme content. Reply in JSON array with YES or NO only for each:\\n\" + $json.title }]}]}"
+      },
+      "name": "Gemini Batch Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "return items.slice(0,5);"
+      },
+      "name": "Top 5",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "mosamkumar205@gmail.com",
+        "toEmail": "ankitkumar857897@gmail.com",
+        "subject": "🔥 Top Indian Funny Trending Videos",
+        "text": "Here are today's top funny trending videos:\\n\\n{{$json.title}}"
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "YouTube Trending IN", "type": "main", "index": 0 }]] },
+    "YouTube Trending IN": { "main": [[{ "node": "Extract YT Titles", "type": "main", "index": 0 }]] },
+    "Extract YT Titles": { "main": [[{ "node": "Keyword Pre Filter", "type": "main", "index": 0 }]] },
+    "Keyword Pre Filter": { "main": [[{ "node": "Gemini Batch Classify", "type": "main", "index": 0 }]] },
+    "Gemini Batch Classify": { "main": [[{ "node": "Top 5", "type": "main", "index": 0 }]] },
+    "Top 5": { "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]] }
+  }
+}      },
       "id": "IfFunny",
       "name": "Is Funny?",
       "type": "n8n-nodes-base.if",
